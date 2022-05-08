@@ -1,0 +1,5 @@
+LINE1:Tem1,Hum1,Lum1,Ten1:ArCo,Desu,LUZs,Tape
+LINE2:Tem2,Hum2,Lum2,Cor2:LEDs,Oven
+LINE3:Ten3,Lum3:Grua,Rolo
+
+

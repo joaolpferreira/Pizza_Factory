@@ -1,0 +1,95 @@
+SENSOR EASY 
+SET search_path TO test;
+SELECT "timestamp" AS timestamp,"value" AS measurement,"type_sens","mote_id" FROM "test"."measure" WHERE "timestamp" < '2020-04-17 18:09:46' AND timestamp > '2020-04-17 18:09:42' AND "type_sens" = 'CURR' AND "mote_id" = '2'
+ORDER BY timestamp ASC
+
+ATUADOR EASY 
+SET search_path TO test;
+SELECT name AS actuator, name_machine AS cell, state FROM test.state
+INNER JOIN test.actuator ON state.act_id=test.actuator.act_id
+INNER JOIN (SELECT MAX(test.state.timestamp) AS time from test.state  GROUP BY test.state.name_machine) AS compare ON state.timestamp=compare.time;
+
+CONFIGURATION DATA EASY
+SET search_path TO test;
+UPDATE mote
+SET mote_id=-1
+WHERE mote_id=2;
+UPDATE mote
+SET mote_id=2
+WHERE mote_id=3;
+UPDATE mote
+SET mote_id=3
+WHERE mote_id=-1;
+
+SELECT mote_id AS "Mote", name_machine AS "Machine"
+FROM mote
+WHERE mote_id!=4;
+
+
+
+SET search_path TO test;
+UPDATE mote
+SET mote_id=-1
+WHERE mote_id=3;
+UPDATE mote
+SET mote_id=3
+WHERE mote_id=2;
+UPDATE mote
+SET mote_id=2
+WHERE mote_id=-1;
+
+SELECT mote_id AS "Mote", name_machine AS "Machine"
+FROM mote
+WHERE mote_id!=4;
+
+CONTROL RULES EASY
+SET search_path TO test;
+UPDATE rule 
+SET value='20' 
+WHERE rule_id='1';
+SELECT rule.rule_id AS "Rule", mote.name_machine AS "Cell", rule.value AS "Reference Value", rule.type_sens AS "Sensor"
+FROM rule,mote
+WHERE rule.rule_id='1'AND mote.mote_id=rule.mote_id;
+
+ENERGY EASY
+SET search_path TO test;
+WITH params (mydate) as (
+  SELECT MIN(timestamp) FROM measure
+)
+SELECT EXTRACT(epoch FROM (timestamp - mydate))/3600/1000* 220 *sum(value) OVER (order by m_id asc rows between unbounded preceding and current row) AS energy, timestamp AS timestamp FROM params, measure WHERE "type_sens" = 'CURR', m_id = 1
+
+SENSOR MEDIUM 
+SET search_path TO test;
+SELECT AVG(measure.value) AS average, mote.name_machine AS room FROM measure 
+JOIN mote USING (mote_id)
+WHERE measure.timestamp < '2020-04-17 18:09:46' AND measure.timestamp > '2020-04-17 18:09:42' AND measure.type_sens = 'CURR' 
+GROUP BY mote.name_machine 
+
+ATUADOR MEDIUM
+SET search_path TO test;
+SELECT COUNT(s_id) AS change, name_machine AS room FROM state
+WHERE state.timestamp < '2020-04-17 18:09:50' AND state.timestamp > '2020-04-17 18:09:42'
+GROUP BY name_machine
+
+CONFIGURATION DATA MEDIUM
+SET search_path TO test;
+SELECT mote.name_machine AS "Cell",COUNT(DISTINCT name_machine) AS "Mote Count" ,COUNT(DISTINCT sensor_mote.type_sens) AS "Sensor Count"
+FROM sensor_mote,mote
+WHERE sensor_mote.mote_id=mote.mote_id
+GROUP BY mote.name_machine;
+
+CONTROL RULES DATA MEDIUM
+SET search_path TO test;
+SELECT mote.name_machine AS "room", COUNT(DISTINCT rule_id) AS "rules"
+FROM rule,mote
+WHERE rule.mote_id=mote.mote_id
+GROUP BY mote.name_machine;
+
+
+ENERGY MEDIUM
+SET search_path TO test;
+SELECT mote.name_machine AS room, EXTRACT(epoch FROM (MAX(timestamp) - MIN(timestamp)))/3600/1000* 0.1544 * 220 * sum(value) AS cost FROM measure 
+JOIN mote USING (mote_id)
+WHERE "type_sens" = 'CURR'
+GROUP BY mote.name_machine 
+
